@@ -106,32 +106,42 @@ source $ZSH/oh-my-zsh.sh
 alias zshconfig="nano ~/.zshrc"
 alias zshsource="source ~/.zshrc"
 
-alias ohmyzsh="nano ~/.oh-my-zsh"
+alias ohmyzsh="cd ~/.oh-my-zsh"
+alias omzconfg="nano ~/.oh-my-zsh"
 
 alias gitlog='git --no-pager log --oneline --all --decorate --pretty=format:"%C(yellow)%h%Creset %C(cyan)%ad%Creset %C(auto)%d%Creset %s" --date=format:"%Y-%m-%d %H:%M:%S"'
-# alias gitgraph="git --no-pager log --oneline --graph"
 alias gitgraph='git --no-pager log --graph --all --decorate --pretty=format:"%C(yellow)%h%Creset %C(cyan)%ad%Creset %C(auto)%d%Creset %s" --date=format:"%Y-%m-%d %H:%M:%S"'
+alias gitbranch="git --no-pager branch --all"
 
 alias eza="eza -lh --icons=auto --git --no-user --group-directories-first --time-style='+%Y-%m-%d %H:%M:%S'"
 alias ezatree="eza --tree"
 
 alias llm='mkdir -p ~/_llm_shared && cd ~/_llm_shared && eza -a'
 
-# alias myip="ifconfig -u | awk '/^[a-zA-Z0-9]/ {iface=\$1} /^[[:space:]]+inet / {print iface, \$2}'"
-
 unalias myip 2>/dev/null
 myip() {
     local blue=$'\033[1;34m'
     local reset=$'\033[0m'
 
-    # IPv4-címek
+    # IPv4-addresses
     echo "IPv4 addresses:"
-    ifconfig -u | awk -v blue="$blue" -v reset="$reset" '
-        /^[a-zA-Z0-9]/ {iface=$1}
-        /^[[:space:]]+inet / {print iface, blue $2 reset}
-    '
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        # macOS
+        ifconfig -u | awk -v blue="$blue" -v reset="$reset" '
+            /^[a-zA-Z0-9]/ {iface=$1; sub(/:$/, "", iface)}
+            /^[[:space:]]+inet / {print iface, blue $2 reset}
+        '
+    else
+        # Linux
+        ip -o -4 addr show up | awk -v blue="$blue" -v reset="$reset" '
+            {
+                split($4, addr, "/")
+                print $2, blue addr[1] reset
+            }
+        '
+    fi
 
-    # SSH-tunnelek
+    # SSH-tunnels
     local tunnels
     tunnels=$(ps -axo pid=,command= | grep '[s]sh.*-L')
 
