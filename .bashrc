@@ -93,6 +93,67 @@ fi
 #alias l='ls -CF'
 
 # Alias definitions.
+
+alias gitlog='git --no-pager log --oneline --all --decorate --pretty=format:"%C(yellow)%h%Creset %C(cyan)%ad%Creset %C(auto)%d%Creset %s" --date=format:"%Y-%m-%d %H:%M:%S"'
+alias gitgraph='git --no-pager log --graph --all --decorate --pretty=format:"%C(yellow)%h%Creset %C(cyan)%ad%Creset %C(auto)%d%Creset %s" --date=format:"%Y-%m-%d %H:%M:%S"'
+alias gitbranch="git --no-pager branch --all"
+
+alias eza="eza -lh --icons=auto --git --no-user --group-directories-first --time-style='+%Y-%m-%d %H:%M:%S'"
+alias ezatree="eza --tree"
+
+unalias myip 2>/dev/null
+myip() {
+    local blue=$'\033[1;34m'
+    local reset=$'\033[0m'
+
+    # IPv4-addresses
+    echo "IPv4 addresses:"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        # macOS
+        ifconfig -u | awk -v blue="$blue" -v reset="$reset" '
+            /^[a-zA-Z0-9]/ {iface=$1; sub(/:$/, "", iface)}
+            /^[[:space:]]+inet / {print iface, blue $2 reset}
+        '
+    else
+        # Linux
+        ip -o -4 addr show up | awk -v blue="$blue" -v reset="$reset" '
+            {
+                split($4, addr, "/")
+                print $2, blue addr[1] reset
+            }
+        '
+    fi
+
+    # SSH-tunnels
+    local tunnels
+    tunnels=$(ps -axo pid=,command= | grep '[s]sh.*-L')
+
+    if [[ -n "$tunnels" ]]; then
+        echo
+        echo "SSH tunnels:"
+
+        while IFS= read -r line; do
+            local pid=${line%% *}
+            local tunnel_status="INACTIVE"
+
+            if lsof -nP -a -p "$pid" -iTCP -sTCP:LISTEN 2>/dev/null | grep -q LISTEN; then
+                tunnel_status="LISTENING"
+            fi
+
+            # Highlight external IPv4-addresses only
+            local colored_line
+            colored_line=$(echo "$line" | awk -v blue="$blue" -v reset="$reset" '
+                {
+                    gsub(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/, blue "&" reset)
+                    print
+                }
+            ')
+
+            echo "[$tunnel_status] $colored_line"
+        done <<< "$tunnels"
+    fi
+}
+
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
 # See /usr/share/doc/bash-doc/examples in the bash-doc package.
